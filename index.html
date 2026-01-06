@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Casino Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --bg-main:#0e0f11;
+  --bg-card:#1c1f26;
+  --bg-input:#101215;
+  --green:#16a34a;
+  --green-dark:#0f7a34;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;font-family:Inter,system-ui,sans-serif}
+body{background:var(--bg-main);color:var(--text);}
+
+/* ================= NAVBAR ================= */
+.navbar {
+  width:100%;
+  height:60px;
+  background:var(--bg-card);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 24px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.5);
+  position:fixed;
+  top:0;
+  left:0;
+  transition: transform 0.8s cubic-bezier(.22,1,.36,1), 
+              padding 0.5s ease, 
+              height 0.5s ease, 
+              font-size 0.5s ease;
+}
+
+
+.nav-left, .nav-center, .nav-right{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+
+.nav-left img.logo {
+  width:120px;
+  transition: width 0.5s ease;
+}
+
+.navbar.chat-open .nav-left img.logo {
+  width: 90px; /* smaller logo */
+}
+
+.navbar.chat-open .nav-center .balance {
+  transform: scale(0.9); /* slightly smaller balance */
+}
+
+
+.nav-center .balance{
+  background:var(--bg-input);
+  padding:6px 12px;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.nav-center .balance:hover{
+  background:var(--green-dark);
+}
+
+.nav-right button, .nav-right .avatar{
+  background:var(--bg-input);
+  border:none;
+  padding:6px 12px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:600;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  gap:6px;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.nav-right button:hover, .nav-right .avatar:hover{
+  transform: scale(1.05);
+  background:var(--green-dark);
+}
+
+.nav-right .avatar img{
+  width:32px;
+  height:32px;
+  border-radius:8px;
+}
+
+.nav-right {
+  margin-left: auto; /* keeps it on the right normally */
+  transition: right 0.5s ease, transform 0.5s ease;
+  position: relative; /* allow us to shift it */
+}
+
+/* When chat is open, move nav-right left by ~25% of navbar width */
+.navbar.chat-open .nav-right {
+  transform: translateX(-25%); /* moves it left smoothly */
+}
+
+/* ================= LOADING ================= */
+#loading{
+  position:fixed;inset:0;
+  background:var(--bg-main);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:50;
+}
+#logo{
+  font-size:38px;
+  font-weight:800;
+  margin-bottom:24px;
+}
+#barWrap{
+  width:260px;height:6px;
+  background:#222;border-radius:10px;
+  overflow:hidden;
+}
+#bar{
+  height:100%;width:0%;
+  background:var(--green);
+}
+
+/* ================= CHAT ================= */
+#chat{
+  position:fixed;
+  right:0;top:0;
+  height:100vh;
+  width:0.1vw;
+  background:var(--bg-chat);
+  box-shadow:-10px 0 40px rgba(0,0,0,.6);
+  transition:width .9s cubic-bezier(.22,1,.36,1);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  z-index: 2;
+}
+#chat.open{width:380px}
+
+/* HEADER */
+#header{
+  padding:14px 16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:1px solid #222;
+}
+#online{
+  display:flex;gap:8px;align-items:center;
+  font-weight:600;
+}
+.dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--green);
+}
+#toggle{cursor:pointer;font-size:18px}
+
+/* FEED */
+#feed{
+  flex:1;
+  padding:14px;
+  overflow-y:auto;
+}
+#feed::-webkit-scrollbar{width:6px}
+#feed::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:10px}
+
+/* MESSAGE */
+.msg{
+  display:flex;
+  gap:10px;
+  margin-bottom:14px;
+}
+.avatar{
+  width:36px;height:36px;
+  border-radius:10px;
+  background:#2a2d34;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:700;
+}
+.content{flex:1}
+.name{
+  font-weight:600;
+  font-size:14px;
+}
+.time{
+  font-size:12px;
+  color:var(--muted);
+  margin-left:6px;
+}
+.text{margin-top:4px}
+
+/* ================= RAIN ================= */
+.rain{
+  background:linear-gradient(180deg,#12301f,#0e2217);
+  border:1px solid #1f7a43;
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:14px;
+}
+.rainTop{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+.rainTitle{
+  color:#4ade80;
+  font-weight:700;
+}
+.rainAmount{
+  font-size:20px;
+  font-weight:800;
+}
+.rain small{
+  color:var(--muted);
+}
+.joinBtn{
+  margin-top:10px;
+  width:100%;
+  background:var(--green);
+  border:none;
+  padding:10px;
+  border-radius:10px;
+  color:#052e16;
+  font-weight:800;
+  cursor:pointer;
+}
+.joinBtn.joined{
+  background:var(--green-dark);
+  color:#bbf7d0;
+}
+
+/* INPUT */
+#inputBar{
+  display:flex;
+  gap:10px;
+  padding:12px;
+  background:var(--bg-input);
+  border-top:1px solid #222;
+}
+#input{
+  flex:1;
+  background:#0b0d10;
+  border:none;
+  outline:none;
+  color:var(--text);
+  padding:10px 12px;
+  border-radius:10px;
+}
+button.send{
+  background:var(--green);
+  border:none;
+  padding:0 16px;
+  border-radius:10px;
+  font-weight:700;
+  cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div id="logo">LOGO</div>
+  <div id="barWrap"><div id="bar"></div></div>
+</div>
+
+<div class="navbar">
+  <div class="nav-left">
+    <img class="logo" src="/mnt/data/2374acac-def0-41b4-9795-68b2f71af00f.png" alt="Logo">
+  </div>
+  
+  <div class="nav-center">
+    <div class="balance">
+      <span>💎</span>
+      <span>0.82</span>
+      <span>▼</span>
+    </div>
+  </div>
+  
+  <div class="nav-right">
+    <button>💳</button>
+    <button>🎁</button>
+    <div class="avatar"><img src="https://i.pravatar.cc/32?img=3" alt="User"></div>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div id="chat">
+  <div id="header">
+    <div id="online"><div class="dot"></div>295 Online</div>
+    <div id="toggle">✕</div>
+  </div>
+
+  <div id="feed"></div>
+
+  <div id="inputBar">
+    <input id="input" placeholder="Say something..." />
+    <button class="send">Send</button>
+  </div>
+</div>
+
+<script>
+/* ===== WEBSOCKET ===== */
+const ws = new WebSocket("ws://localhost:8080");
+const username = "User" + Math.floor(Math.random() * 9999);
+
+/* ===== ELEMENTS ===== */
+const feed = document.getElementById("feed");
+const input = document.getElementById("input");
+
+/* ===== LOADING ===== */
+let p=0, bar=document.getElementById("bar");
+let load=setInterval(()=>{
+  p+=2; bar.style.width=p+"%";
+  if(p>=100){
+    clearInterval(load);
+    setTimeout(()=>{
+      loading.remove();
+      chat.classList.add("open");
+    },400);
+  }
+},40);
+
+/* ===== TOGGLE ===== */
+const navbar = document.querySelector(".navbar");
+toggle.onclick = () => {
+  chat.classList.toggle("open");
+  toggle.textContent = chat.classList.contains("open") ? "✕" : "💬";
+
+  if(chat.classList.contains("open")){
+    navbar.classList.add("chat-open");
+  } else {
+    navbar.classList.remove("chat-open");
+  }
+};
+
+
+/* ===== CHAT SEND ===== */
+document.querySelector(".send").onclick=send;
+input.addEventListener("keydown",e=>e.key==="Enter"&&send());
+
+function send() {
+  if (!input.value.trim()) return;
+
+  ws.send(JSON.stringify({
+    type: "chat",
+    name: username,
+    text: input.value
+  }));
+
+  input.value = "";
+}
+
+/* ===== ADD MESSAGE ===== */
+function addMsg(name,text,time){
+  const m=document.createElement("div");
+  m.className="msg";
+  m.innerHTML=`
+    <div class="avatar">${name[0]}</div>
+    <div class="content">
+      <div class="name">${name}
+        <span class="time">${new Date(time || Date.now()).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>
+      </div>
+      <div class="text">${text}</div>
+    </div>`;
+  feed.appendChild(m);
+  feed.scrollTop=feed.scrollHeight;
+}
+
+function showRain(rain) {
+  // REMOVE EXISTING RAIN (important)
+  const old = document.querySelector(".rain");
+  if (old) old.remove();
+
+  const r = document.createElement("div");
+  r.className = "rain";
+  r.innerHTML = `
+    <div class="rainTop">
+      <div class="rainTitle">Emerald Rain</div>
+      <div>${rain.joined?.length || 0} joined</div>
+    </div>
+    <div class="rainAmount">${rain.amount} 💎</div>
+    <small>Distributed to winners</small>
+    <button class="joinBtn">Join</button>
+  `;
+
+  r.querySelector(".joinBtn").onclick = () => {
+    ws.send(JSON.stringify({
+      type: "join_rain",
+      name: username
+    }));
+  };
+
+  feed.prepend(r);
+}
+
+
+/* ===== SOCKET EVENTS ===== */
+ws.onmessage = (e) => {
+  const data = JSON.parse(e.data);
+
+  if (data.type === "online") {
+    document.getElementById("online").innerHTML =
+      `<div class="dot"></div>${data.online} Online`;
+  }
+
+  if (data.type === "chat") {
+    addMsg(data.name, data.text, data.time);
+  }
+
+  if (data.type === "rain_start") {
+    showRain(data.rain);
+  }
+
+  if (data.type === "rain_update") {
+    const joined = document.querySelector(".rainTop div:last-child");
+    if (joined) joined.textContent = data.joined + " joined";
+  }
+
+  if (data.type === "rain_end") {
+    addMsg("SYSTEM", `Rain ended! Each winner got ${data.reward} 💎`);
+  }
+
+  if (data.type === "init") {
+  // ONLINE
+  document.getElementById("online").innerHTML =
+    `<div class="dot"></div>${data.online} Online`;
+
+  // CHAT HISTORY
+  feed.innerHTML = ""; // CLEAR FIRST
+
+  data.messages.forEach(m => {
+  addMsg(m.name, m.text, m.time);
+  });
+
+
+  // ACTIVE RAIN
+  if (data.rain) {
+    showRain(data.rain);
+  }
+}
+};
+</script>
+
+
+
+</body>
+</html>
